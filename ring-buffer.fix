@@ -3,7 +3,7 @@
 // Ring buffer can be used as deque, with armortized O(1) complexity for push/pop operations at both ends (front and back).
 module RingBuffer;
 
-type RingBuffer a = struct { data : Array (Option a), start : I64, end : I64 };
+type RingBuffer a = struct { data : Array (Option a), start : I64, count : I64 };
 
 // Create a new ring buffer from an array. 
 // 
@@ -13,7 +13,8 @@ type RingBuffer a = struct { data : Array (Option a), start : I64, end : I64 };
 // - `arr`: The array to initialize the ring buffer with.
 create : Array a -> RingBuffer a;
 create = |arr| (
-    RingBuffer { data : arr.map(some), start : 0, end : arr.get_size }
+    let n = arr.get_size;
+    RingBuffer { data : arr.map(some), start : 0, count : n }
 );
 
 // Get the size of a ring buffer.
@@ -21,16 +22,7 @@ create = |arr| (
 // # Parameters
 // - `rb`: The ring buffer to get the size of.
 get_size : RingBuffer a -> I64;
-get_size = |rb| (
-    let e = rb.@end;
-    let s = rb.@start;
-    if e >= s {
-        e - s
-    } else {
-        let n = rb.@data.get_size;
-        n + e - s
-    }
-);
+get_size = |rb| rb.@count;
 
 // Get the element at the specified index in the ring buffer.
 //
@@ -111,11 +103,8 @@ act = |i, f, rb| (
 // - `rb`: The ring buffer to get the front element from.
 get_front : RingBuffer a -> Option a;
 get_front = |rb| (
-    if rb.@start == rb.@end {
-        none()
-    } else {
-        rb.@data.@(rb.@start)
-    }
+    if rb.@count == 0 { none() };
+    rb.@data.@(rb.@start)
 );
 
 // Pop the front element from the ring buffer.
@@ -124,16 +113,15 @@ get_front = |rb| (
 // - `rb`: The ring buffer to pop the front element from.
 pop_front : RingBuffer a -> RingBuffer a;
 pop_front = |rb| (
-    if rb.@start == rb.@end {
-        // Buffer is empty
+    let s = rb.@start;
+    if rb.@count == 0 { // Buffer is empty
         rb
-    } else {
-        let s = rb.@start;
-        let n = rb.@data.get_size;
-        let rb = rb.mod_data(set(s, none()));
-        let new_start = (s + 1) % n;
-        rb.set_start(new_start)
-    }
+    };
+    let s = rb.@start;
+    let n = rb.@data.get_size;
+    let rb = rb.mod_data(set(s, none()));
+    let new_start = (s + 1) % n;
+    rb.set_start(new_start)
 );
 
 // Push a value to the front of the ring buffer.
@@ -144,7 +132,7 @@ pop_front = |rb| (
 push_front : a -> RingBuffer a -> RingBuffer a;
 push_front = |v, rb| (
     if rb.@start == rb.@end {
-        // Buffer is empty and has no capacity
+        // Buffer is full and has no capacity
         rb
     } else {
         let s = rb.@start;
