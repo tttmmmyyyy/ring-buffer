@@ -107,6 +107,17 @@ Pop the front element from the ring buffer.
 
 - `rb`: The ring buffer to pop the front element from.
 
+#### push_back
+
+Type: `a -> RingBuffer::RingBuffer a -> RingBuffer::RingBuffer a`
+
+Push a value to the back of the ring buffer.
+
+##### Parameters
+
+- `v`: The value to push to the back.
+- `rb`: The ring buffer to push the value to the back of.
+
 #### push_front
 
 Type: `a -> RingBuffer::RingBuffer a -> RingBuffer::RingBuffer a`
@@ -146,7 +157,7 @@ Type: `Std::Array (Std::Option a)`
 
 Type: `Std::I64`
 
-##### field `end`
+##### field `count`
 
 Type: `Std::I64`
 

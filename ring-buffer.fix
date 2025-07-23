@@ -13,8 +13,7 @@ type RingBuffer a = struct { data : Array (Option a), start : I64, count : I64 }
 // - `arr`: The array to initialize the ring buffer with.
 create : Array a -> RingBuffer a;
 create = |arr| (
-    let n = arr.get_size;
-    RingBuffer { data : arr.map(some), start : 0, count : n }
+    RingBuffer { data : arr.map(some), start : 0, count : arr.get_size }
 );
 
 // Get the size of a ring buffer.
@@ -23,6 +22,115 @@ create = |arr| (
 // - `rb`: The ring buffer to get the size of.
 get_size : RingBuffer a -> I64;
 get_size = |rb| rb.@count;
+
+// Get the front element of the ring buffer.
+//
+// # Parameters
+// - `rb`: The ring buffer to get the front element from.
+get_front : RingBuffer a -> Option a;
+get_front = |rb| (
+    if rb.@count == 0 { none() };
+    rb.@data.@(rb.@start)
+);
+
+// Get the back element of the ring buffer.
+//
+// # Parameters
+// - `rb`: The ring buffer to get the back element from.
+get_back : RingBuffer a -> Option a;
+get_back = |rb| (
+    if rb.@count == 0 { none() };
+    let e = rb.@start + rb.@count;
+    let n = rb.@data.get_size;
+    let back_index = (e - 1 + n) % n;
+    rb.@data.@(back_index)
+);
+
+// Pop the front element from the ring buffer.
+//
+// # Parameters
+// - `rb`: The ring buffer to pop the front element from.
+pop_front : RingBuffer a -> RingBuffer a;
+pop_front = |rb| (
+    if rb.@count == 0 { // Buffer is empty
+        rb
+    };
+    let s = rb.@start;
+    let n = rb.@data.get_size;
+    let rb = rb.mod_data(set(s, none()));
+    let new_start = (s + 1) % n;
+    rb.set_start(new_start).set_count(rb.@count - 1)
+);
+
+// Pop the back element from the ring buffer.
+// 
+// # Parameters
+// - `rb`: The ring buffer to pop the back element from.
+pop_back : RingBuffer a -> RingBuffer a;
+pop_back = |rb| (
+    if rb.@count == 0 { // Buffer is empty
+        rb
+    };
+    let s = rb.@start;
+    let e = s + rb.@count;
+    let n = rb.@data.get_size;
+    let back_idx = (e - 1 + n) % n;
+    let rb = rb.mod_data(set(back_idx, none()));
+    rb.set_count(rb.@count - 1)
+);
+
+// Push a value to the front of the ring buffer.
+//
+// # Parameters
+// - `v`: The value to push to the front.
+// - `rb`: The ring buffer to push the value to the front of.
+push_front : a -> RingBuffer a -> RingBuffer a;
+push_front = |v, rb| (
+    let rb = if rb.@count == rb.@data.get_size { // Buffer is full, realloc
+        rb._realloc
+    } else { rb };
+    let s = rb.@start;
+    let n = rb.@data.get_size;
+    let new_start = (s - 1 + n) % n;
+    let rb = rb.mod_data(set(new_start, some(v)));
+    rb.set_start(new_start).set_count(rb.@count + 1)
+);
+
+// Push a value to the back of the ring buffer.
+//
+// # Parameters
+// - `v`: The value to push to the back.
+// - `rb`: The ring buffer to push the value to the back of.
+push_back : a -> RingBuffer a -> RingBuffer a;
+push_back = |v, rb| (
+    let rb = if rb.@count == rb.@data.get_size { // Buffer is full
+        rb._realloc
+    } else { rb };
+    let s = rb.@start;
+    let n = rb.@data.get_size;
+    let e = s + rb.@count;
+    let back_index = (e + n) % n;
+    let rb = rb.mod_data(set(back_index, some(v)));
+    rb.set_count(rb.@count + 1)
+);
+
+// Double the size of the buffer
+_realloc : RingBuffer a -> RingBuffer a;
+_realloc = |rb| (
+    let s = rb.@start;
+    let n = rb.@data.get_size;
+    let c = rb.@count;
+    let new_n = if n == 0 { 1 } else { n * 2 };
+    let new_data = Array::fill(new_n, none());
+    let new_data = loop((s, 0, new_data), |(p, i, new_data)|
+        if i == c { break $ new_data };
+        let new_data = new_data.set(i, rb.@data.@(p));
+        let p = (p + 1) % n;
+        let i = i + 1;
+        continue $ (p, i, new_data)
+    );
+    RingBuffer { data : new_data, start : 0, count : c }
+);
 
 // Get the element at the specified index in the ring buffer.
 //
@@ -95,100 +203,4 @@ act = |i, f, rb| (
             none() => undefined("[RingBuffer::act] Index out of bounds!")
         }
     ))
-);
-
-// Get the front element of the ring buffer.
-//
-// # Parameters
-// - `rb`: The ring buffer to get the front element from.
-get_front : RingBuffer a -> Option a;
-get_front = |rb| (
-    if rb.@count == 0 { none() };
-    rb.@data.@(rb.@start)
-);
-
-// Pop the front element from the ring buffer.
-//
-// # Parameters
-// - `rb`: The ring buffer to pop the front element from.
-pop_front : RingBuffer a -> RingBuffer a;
-pop_front = |rb| (
-    let s = rb.@start;
-    if rb.@count == 0 { // Buffer is empty
-        rb
-    };
-    let s = rb.@start;
-    let n = rb.@data.get_size;
-    let rb = rb.mod_data(set(s, none()));
-    let new_start = (s + 1) % n;
-    rb.set_start(new_start)
-);
-
-// Push a value to the front of the ring buffer.
-//
-// # Parameters
-// - `v`: The value to push to the front.
-// - `rb`: The ring buffer to push the value to the front of.
-push_front : a -> RingBuffer a -> RingBuffer a;
-push_front = |v, rb| (
-    if rb.@start == rb.@end {
-        // Buffer is full and has no capacity
-        rb
-    } else {
-        let s = rb.@start;
-        let n = rb.@data.get_size;
-        let new_start = (s - 1 + n) % n;
-        let rb = rb.mod_data(set(new_start, some(v)));
-        rb.set_start(new_start)
-    }
-);
-
-// Get the back element of the ring buffer.
-//
-// # Parameters
-// - `rb`: The ring buffer to get the back element from.
-get_back : RingBuffer a -> Option a;
-get_back = |rb| (
-    if rb.@start == rb.@end {
-        none()
-    } else {
-        let e = rb.@end;
-        let n = rb.@data.get_size;
-        let back_index = (e - 1 + n) % n;
-        rb.@data.@(back_index)
-    }
-);
-
-// Pop the back element from the ring buffer.
-// 
-// # Parameters
-// - `rb`: The ring buffer to pop the back element from.
-pop_back : RingBuffer a -> RingBuffer a;
-pop_back = |rb| (
-    if rb.@start == rb.@end {
-        // Buffer is empty
-        rb
-    } else {
-        let e = rb.@end;
-        let n = rb.@data.get_size;
-        let rb = rb.mod_data(set(e - 1, none()));
-        let new_end = (e - 1 + n) % n;
-        rb.set_end(new_end)
-    }
-);
-
-// Double the size of the buffer
-_realloc : RingBuffer a -> RingBuffer a;
-_realloc = |rb| (
-    let s = rb.@start;
-    let n = rb.@data.get_size;
-    let new_data = Array::fill(n * 2, none());
-    let new_data = loop((s, 0, new_data), |(p, i, new_data)|
-        if i == n { break $ new_data };
-        let new_data = new_data.set(i, rb.@data.@(p));
-        let p = (p + 1) % n;
-        let i = i + 1;
-        continue $ (p, i, new_data)
-    );
-    RingBuffer { data : new_data, start : 0, end : n }
 );

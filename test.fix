@@ -1,7 +1,156 @@
 module Test;
 
+import RingBuffer; // RingBufferモジュールが利用可能であることを前提とする
+
 test : IO ();
 test = (
-    assert_eq(|_|"case 1", 42, 6*7);;
+    test_operation;;
+    test_accessor;;
+
+    pure()
+);
+
+test_operation : IO ();
+test_operation = (
+    // 0. 初期状態のテスト
+    let rb = RingBuffer::create([]);
+    assert_eq(|_|"case 0, size", rb.get_size, 0);;
+    assert_eq(|_|"case 0, front", rb.get_front, none());;
+    assert_eq(|_|"case 0, back", rb.get_back, none());;
+
+    // 1. 空のバッファからのpop_front（変化なし）
+    let rb = rb.pop_front;
+    assert_eq(|_|"case 1, size", rb.get_size, 0);;
+    assert_eq(|_|"case 1, front", rb.get_front, none());;
+    assert_eq(|_|"case 1, back", rb.get_back, none());;
+
+    // 2. push_front(1)
+    let rb = rb.push_front(1);
+    assert_eq(|_|"case 2, size", rb.get_size, 1);;
+    assert_eq(|_|"case 2, front", rb.get_front, some(1));;
+    assert_eq(|_|"case 2, back", rb.get_back, some(1));;
+
+    // 3. push_back(2)
+    let rb = rb.push_back(2);
+    assert_eq(|_|"case 3, size", rb.get_size, 2);;
+    assert_eq(|_|"case 3, front", rb.get_front, some(1));;
+    assert_eq(|_|"case 3, back", rb.get_back, some(2));;
+
+    // 4. push_front(0)
+    let rb = rb.push_front(0);
+    assert_eq(|_|"case 4, size", rb.get_size, 3);;
+    assert_eq(|_|"case 4, front", rb.get_front, some(0));;
+    assert_eq(|_|"case 4, back", rb.get_back, some(2));;
+
+    // 5. push_back(3)
+    let rb = rb.push_back(3);
+    assert_eq(|_|"case 5, size", rb.get_size, 4);;
+    assert_eq(|_|"case 5, front", rb.get_front, some(0));;
+    assert_eq(|_|"case 5, back", rb.get_back, some(3));;
+
+    // 6. pop_front()
+    let rb = rb.pop_front;
+    assert_eq(|_|"case 6, size", rb.get_size, 3);;
+    assert_eq(|_|"case 6, front", rb.get_front, some(1));;
+    assert_eq(|_|"case 6, back", rb.get_back, some(3));;
+
+    // 7. pop_back()
+    let rb = rb.pop_back;
+    assert_eq(|_|"case 7, size", rb.get_size, 2);;
+    assert_eq(|_|"case 7, front", rb.get_front, some(1));;
+    assert_eq(|_|"case 7, back", rb.get_back, some(2));;
+
+    // 8. push_front(X)を繰り返してreallocを発生させる
+    let rb = rb.push_front(0); // [0, 1, 2]
+    assert_eq(|_|"case 8, size", rb.get_size, 3);;
+    assert_eq(|_|"case 8, front", rb.get_front, some(0));;
+    assert_eq(|_|"case 8, back", rb.get_back, some(2));;
+
+    let rb = rb.push_back(3); // [0, 1, 2, 3]
+    assert_eq(|_|"case 9, size", rb.get_size, 4);;
+    assert_eq(|_|"case 9, front", rb.get_front, some(0));;
+    assert_eq(|_|"case 9, back", rb.get_back, some(3));;
+    
+    let rb = rb.push_front(-1); // [-1, 0, 1, 2, 3]
+    assert_eq(|_|"case 10, size", rb.get_size, 5);;
+    assert_eq(|_|"case 10, front", rb.get_front, some(-1));;
+    assert_eq(|_|"case 10, back", rb.get_back, some(3));;
+
+    // 9. 全ての要素をポップし、空に戻す
+    let rb = rb.pop_front; // [0, 1, 2, 3]
+    assert_eq(|_|"case 11, size", rb.get_size, 4);;
+    assert_eq(|_|"case 11, front", rb.get_front, some(0));;
+    assert_eq(|_|"case 11, back", rb.get_back, some(3));;
+
+    let rb = rb.pop_back; // [0, 1, 2]
+    assert_eq(|_|"case 12, size", rb.get_size, 3);;
+    assert_eq(|_|"case 12, front", rb.get_front, some(0));;
+    assert_eq(|_|"case 12, back", rb.get_back, some(2));;
+    
+    let rb = rb.pop_front; // [1, 2]
+    assert_eq(|_|"case 13, size", rb.get_size, 2);;
+    assert_eq(|_|"case 13, front", rb.get_front, some(1));;
+    assert_eq(|_|"case 13, back", rb.get_back, some(2));;
+    
+    let rb = rb.pop_back; // [1]
+    assert_eq(|_|"case 14, size", rb.get_size, 1);;
+    assert_eq(|_|"case 14, front", rb.get_front, some(1));;
+    assert_eq(|_|"case 14, back", rb.get_back, some(1));;
+
+    let rb = rb.pop_front; // []
+    assert_eq(|_|"case 15, size", rb.get_size, 0);;
+    assert_eq(|_|"case 15, front", rb.get_front, none());;
+    assert_eq(|_|"case 15, back", rb.get_back, none());;
+
+    // 10. 空のバッファからのpop_back（変化なし）
+    let rb = rb.pop_back;
+    assert_eq(|_|"case 16, size", rb.get_size, 0);;
+    assert_eq(|_|"case 16, front", rb.get_front, none());;
+    assert_eq(|_|"case 16, back", rb.get_back, none());;
+
+    // 11. createからの初期化テスト
+    let rb = RingBuffer::create([10, 20, 30]);
+    assert_eq(|_|"case 17, size", rb.get_size, 3);;
+    assert_eq(|_|"case 17, front", rb.get_front, some(10));;
+    assert_eq(|_|"case 17, back", rb.get_back, some(30));;
+
+    // 12. 初期化したバッファでの操作
+    let rb = rb.push_front(5);
+    assert_eq(|_|"case 18, size", rb.get_size, 4);;
+    assert_eq(|_|"case 18, front", rb.get_front, some(5));;
+    assert_eq(|_|"case 18, back", rb.get_back, some(30));;
+
+    let rb = rb.pop_back;
+    assert_eq(|_|"case 19, size", rb.get_size, 3);;
+    assert_eq(|_|"case 19, front", rb.get_front, some(5));;
+    assert_eq(|_|"case 19, back", rb.get_back, some(20));;
+
+    pure()
+);
+
+test_accessor : IO ();
+test_accessor = (
+    // [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    let rb = RingBuffer::create([4, 5, 6]).push_front(3).push_front(2).push_front(1).push_back(7).push_back(8).push_back(9);
+    assert_eq(|_|"case 1, 0", rb.@(0), 1);;
+    assert_eq(|_|"case 1, 1", rb.@(1), 2);;
+    assert_eq(|_|"case 1, 2", rb.@(2), 3);;
+    assert_eq(|_|"case 1, 3", rb.@(3), 4);;
+    assert_eq(|_|"case 1, 4", rb.@(4), 5);;
+    assert_eq(|_|"case 1, 5", rb.@(5), 6);;
+    assert_eq(|_|"case 1, 6", rb.@(6), 7);;
+    assert_eq(|_|"case 1, 7", rb.@(7), 8);;
+    assert_eq(|_|"case 1, 8", rb.@(8), 9);;
+
+    let rb = rb.set(0, 0);
+    assert_eq(|_|"case 2, set(0)", rb.@(0), 0);;
+
+    let rb = rb.mod(1, |x| x + 2);
+    assert_eq(|_|"case 3, mod(1)", rb.@(1), 4);;
+
+    let (s, rb) = rb.act(7, |x| ("RingBuffer", x + 2));
+    assert_eq(|_|"case 4, act(7)", s, "RingBuffer");;
+    assert_eq(|_|"case 4, act(7)", rb.@(7), 10);;
+
     pure()
 );
