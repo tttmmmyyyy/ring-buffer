@@ -75,6 +75,16 @@ Get the size of a ring buffer.
 
 - `rb`: The ring buffer to get the size of.
 
+#### is_empty
+
+Type: `RingBuffer::RingBuffer a -> Std::Bool`
+
+Check if the ring buffer is empty.
+
+##### Parameters
+
+- `rb`: The ring buffer to check.
+
 #### mod
 
 Type: `Std::I64 -> (a -> a) -> RingBuffer::RingBuffer a -> RingBuffer::RingBuffer a`

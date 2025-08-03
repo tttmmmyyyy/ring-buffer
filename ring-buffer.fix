@@ -23,6 +23,13 @@ create = |arr| (
 get_size : RingBuffer a -> I64;
 get_size = |rb| rb.@count;
 
+// Check if the ring buffer is empty.
+// 
+// # Parameters
+// - `rb`: The ring buffer to check.
+is_empty : RingBuffer a -> Bool;
+is_empty = |rb| rb.@count == 0;
+
 // Get the front element of the ring buffer.
 //
 // # Parameters
