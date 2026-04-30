@@ -13,7 +13,7 @@ type RingBuffer a = struct { data : Array (Option a), start : I64, count : I64 }
 // - `arr`: The array to initialize the ring buffer with.
 create : Array a -> RingBuffer a;
 create = |arr| (
-    RingBuffer { data : arr.map(some), start : 0, count : arr.get_size }
+    RingBuffer { data : arr.map(some), start : 0, count : arr.@size }
 );
 
 // Get the size of a ring buffer.
@@ -48,7 +48,7 @@ get_back : RingBuffer a -> Option a;
 get_back = |rb| (
     if rb.@count == 0 { none() };
     let e = rb.@start + rb.@count;
-    let n = rb.@data.get_size;
+    let n = rb.@data.@size;
     let back_index = (e - 1 + n) % n;
     rb.@data.@(back_index)
 );
@@ -63,7 +63,7 @@ pop_front = |rb| (
         rb
     };
     let s = rb.@start;
-    let n = rb.@data.get_size;
+    let n = rb.@data.@size;
     let rb = rb.mod_data(set(s, none()));
     let new_start = (s + 1) % n;
     rb.set_start(new_start).set_count(rb.@count - 1)
@@ -80,7 +80,7 @@ pop_back = |rb| (
     };
     let s = rb.@start;
     let e = s + rb.@count;
-    let n = rb.@data.get_size;
+    let n = rb.@data.@size;
     let back_idx = (e - 1 + n) % n;
     let rb = rb.mod_data(set(back_idx, none()));
     rb.set_count(rb.@count - 1)
@@ -93,11 +93,11 @@ pop_back = |rb| (
 // - `rb`: The ring buffer to push the value to the front of.
 push_front : a -> RingBuffer a -> RingBuffer a;
 push_front = |v, rb| (
-    let rb = if rb.@count == rb.@data.get_size { // Buffer is full, realloc
+    let rb = if rb.@count == rb.@data.@size { // Buffer is full, realloc
         rb._realloc
     } else { rb };
     let s = rb.@start;
-    let n = rb.@data.get_size;
+    let n = rb.@data.@size;
     let new_start = (s - 1 + n) % n;
     let rb = rb.mod_data(set(new_start, some(v)));
     rb.set_start(new_start).set_count(rb.@count + 1)
@@ -110,11 +110,11 @@ push_front = |v, rb| (
 // - `rb`: The ring buffer to push the value to the back of.
 push_back : a -> RingBuffer a -> RingBuffer a;
 push_back = |v, rb| (
-    let rb = if rb.@count == rb.@data.get_size { // Buffer is full
+    let rb = if rb.@count == rb.@data.@size { // Buffer is full
         rb._realloc
     } else { rb };
     let s = rb.@start;
-    let n = rb.@data.get_size;
+    let n = rb.@data.@size;
     let e = s + rb.@count;
     let back_index = (e + n) % n;
     let rb = rb.mod_data(set(back_index, some(v)));
@@ -125,7 +125,7 @@ push_back = |v, rb| (
 _realloc : RingBuffer a -> RingBuffer a;
 _realloc = |rb| (
     let s = rb.@start;
-    let n = rb.@data.get_size;
+    let n = rb.@data.@size;
     let c = rb.@count;
     let new_n = if n == 0 { 1 } else { n * 2 };
     let new_data = Array::fill(new_n, none());
@@ -147,7 +147,7 @@ _realloc = |rb| (
 @ : I64 -> RingBuffer a -> a;
 @ = |i, rb| (
     let s = rb.@start;
-    let n = rb.@data.get_size;
+    let n = rb.@data.@size;
     let i = (i + s) % n;
     match rb.@data.@(i) {
         some(v) => v,
@@ -164,7 +164,7 @@ _realloc = |rb| (
 set : I64 -> a -> RingBuffer a -> RingBuffer a;
 set = |i, v, rb| (
     let s = rb.@start;
-    let n = rb.@data.get_size;
+    let n = rb.@data.@size;
     let i = (i + s) % n;
     rb.mod_data(mod(i, |opt|
         match opt {
@@ -183,7 +183,7 @@ set = |i, v, rb| (
 mod : I64 -> (a -> a) -> RingBuffer a -> RingBuffer a;
 mod = |i, f, rb| (
     let s = rb.@start;
-    let n = rb.@data.get_size;
+    let n = rb.@data.@size;
     let i = (i + s) % n;
     rb.mod_data(mod(i, |opt|
         match opt {
@@ -202,7 +202,7 @@ mod = |i, f, rb| (
 act : [f : Functor] I64 -> (a -> f a) -> RingBuffer a -> f (RingBuffer a);
 act = |i, f, rb| (
     let s = rb.@start;
-    let n = rb.@data.get_size;
+    let n = rb.@data.@size;
     let i = (i + s) % n;
     rb.act_data(act(i, |opt|
         match opt {

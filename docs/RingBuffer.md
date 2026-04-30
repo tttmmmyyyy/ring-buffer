@@ -1,6 +1,6 @@
 # RingBuffer
 
-Defined in ring-buffer@0.1.0
+Defined in ring-buffer@0.1.2
 
 Provides a ring buffer implementation.
 
