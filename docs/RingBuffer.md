@@ -24,7 +24,8 @@ assert_eq(|_|"", rb.@(0), 2)
 
 Type: `Std::I64 -> RingBuffer::RingBuffer a -> a`
 
-Get the element at the specified index in the ring buffer.
+Get the element at the specified index in the ring buffer. Index 0 is the front element, and
+index `rb.get_size - 1` is the back element.
 
 ##### Parameters
 
