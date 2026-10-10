@@ -6,6 +6,16 @@ Provides a ring buffer implementation.
 
 Ring buffer can be used as deque, with armortized O(1) complexity for push/pop operations at both ends (front and back).
 
+```fix
+let rb = create([2, 3]).push_front(1).push_back(4);
+assert_eq(|_|"", rb.get_front, some(1));;
+assert_eq(|_|"", rb.get_back, some(4));;
+assert_eq(|_|"", rb.@(1), 2);;
+let rb = rb.pop_front.pop_back;
+assert_eq(|_|"", rb.get_size, 2);;
+assert_eq(|_|"", rb.@(0), 2)
+```
+
 ## Values
 
 ### namespace RingBuffer
@@ -14,7 +24,8 @@ Ring buffer can be used as deque, with armortized O(1) complexity for push/pop o
 
 Type: `Std::I64 -> RingBuffer::RingBuffer a -> a`
 
-Get the element at the specified index in the ring buffer.
+Get the element at the specified index in the ring buffer. Index 0 is the front element, and
+index `rb.get_size - 1` is the back element.
 
 ##### Parameters
 
